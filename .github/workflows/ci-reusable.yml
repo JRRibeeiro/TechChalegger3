@@ -244,4 +244,10 @@ jobs:
           git add -A
           git diff --staged --quiet && echo "nada mudou" && exit 0
           git commit -m "deploy(${{ inputs.service }}): ${{ needs.image.outputs.tag }}"
-          git push
+          for i in 1 2 3 4 5; do
+            git push && break
+            echo "push rejeitado, tentando de novo ($i)"
+            git fetch origin main
+            git rebase origin/main
+            sleep $((RANDOM % 4 + 1))
+          done
