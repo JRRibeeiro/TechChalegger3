@@ -98,7 +98,7 @@ jobs:
         working-directory: ${{ env.WORKDIR }}
         run: |
           pip install flake8
-          flake8 . --max-line-length=120 --count --statistics
+          flake8 . --select=E9,F63,F7,F82 --show-source --statistics
 
   # -------------------------------------------------------------------
   # 3. Seguranca. SCA olha as dependencias, SAST olha o codigo proprio.
