@@ -1,6 +1,6 @@
 terraform {
   backend "s3" {
-    bucket       = "BUCKET_DO_BOOTSTRAP"
+    bucket       = "jrribeeiro-tc3-tfstate-2026"
     key          = "techchallenge3/infra.tfstate"
     region       = "us-east-1"
     encrypt      = true

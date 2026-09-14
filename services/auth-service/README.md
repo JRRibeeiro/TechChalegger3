@@ -88,4 +88,4 @@ curl http://localhost:8001/validate \
 -H "Authorization: Bearer chave-errada-123"
 ```
 
-Saída esperada: `Chave de API inválida ou inativa`
+Saída esperada: `Chave de API inválida ou inativa`# trigger inicial
