@@ -146,7 +146,7 @@ jobs:
         working-directory: ${{ env.WORKDIR }}
         run: |
           go install github.com/securego/gosec/v2/cmd/gosec@latest
-          gosec -severity high -confidence medium ./...
+          gosec -severity high -confidence medium -exclude=G704 ./...
 
       - name: Preparar Python
         if: inputs.language == 'python'

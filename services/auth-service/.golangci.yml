@@ -1,6 +1,4 @@
-version: "2"
-linters:
-  settings:
-    errcheck:
-      exclude-functions:
-        - (*encoding/json.Encoder).Encode
+linters-settings:
+  errcheck:
+    exclude-functions:
+      - (*encoding/json.Encoder).Encode
