@@ -1,0 +1,21 @@
+name: auth-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/auth-service/**'
+      - '.github/workflows/auth-service.yml'
+      - '.github/workflows/ci-reusable.yml'
+  pull_request:
+    paths:
+      - 'services/auth-service/**'
+  workflow_dispatch:
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci-reusable.yml
+    with:
+      service: auth-service
+      language: go
+    secrets: inherit

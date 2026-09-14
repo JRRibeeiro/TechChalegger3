@@ -1,0 +1,10 @@
+variable "project" { type = string }
+variable "cluster_version" { type = string }
+variable "lab_role_name" { type = string }
+variable "public_subnet_ids" { type = list(string) }
+variable "private_subnet_ids" { type = list(string) }
+variable "nodes_in_private_subnets" { type = bool }
+variable "instance_type" { type = string }
+variable "desired_size" { type = number }
+variable "min_size" { type = number }
+variable "max_size" { type = number }

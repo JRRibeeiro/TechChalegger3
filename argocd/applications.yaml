@@ -1,0 +1,113 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: auth-service
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/JRRibeeiro/TechChalegger3-gitops.git
+    targetRevision: main
+    path: apps/auth-service
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: techchallenger
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: flag-service
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/JRRibeeiro/TechChalegger3-gitops.git
+    targetRevision: main
+    path: apps/flag-service
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: techchallenger
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: targeting-service
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/JRRibeeiro/TechChalegger3-gitops.git
+    targetRevision: main
+    path: apps/targeting-service
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: techchallenger
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: evaluation-service
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/JRRibeeiro/TechChalegger3-gitops.git
+    targetRevision: main
+    path: apps/evaluation-service
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: techchallenger
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: analytics-service
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/JRRibeeiro/TechChalegger3-gitops.git
+    targetRevision: main
+    path: apps/analytics-service
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: techchallenger
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: togglemaster-ingress
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/JRRibeeiro/TechChalegger3-gitops.git
+    targetRevision: main
+    path: ingress
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: techchallenger
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

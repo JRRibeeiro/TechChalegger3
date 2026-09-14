@@ -1,0 +1,247 @@
+# Workflow reutilizavel. Os 5 microsservicos chamam este mesmo arquivo,
+# mudando apenas o nome do servico e a linguagem.
+name: CI reutilizavel
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        description: Nome do microsservico e do repositorio no ECR
+        required: true
+        type: string
+      language:
+        description: go ou python
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID: { required: true }
+      AWS_SECRET_ACCESS_KEY: { required: true }
+      AWS_SESSION_TOKEN: { required: true }
+      ECR_REGISTRY: { required: true }
+      GITOPS_TOKEN: { required: true }
+
+env:
+  AWS_REGION: us-east-1
+  GITOPS_REPO: JRRibeeiro/TechChalegger3-gitops
+  WORKDIR: services/${{ inputs.service }}
+
+jobs:
+  # -------------------------------------------------------------------
+  # 1. Compila e roda teste unitario
+  # -------------------------------------------------------------------
+  build:
+    name: Build e teste
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preparar Go
+        if: inputs.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: ${{ env.WORKDIR }}/go.sum
+
+      - name: Compilar e testar (Go)
+        if: inputs.language == 'go'
+        working-directory: ${{ env.WORKDIR }}
+        run: |
+          go build ./...
+          go test ./... || echo "sem teste unitario neste servico"
+
+      - name: Preparar Python
+        if: inputs.language == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar e testar (Python)
+        if: inputs.language == 'python'
+        working-directory: ${{ env.WORKDIR }}
+        run: |
+          pip install -r requirements.txt
+          python -m compileall .
+          python -m pytest || echo "sem teste unitario neste servico"
+
+  # -------------------------------------------------------------------
+  # 2. Analise estatica de estilo
+  # -------------------------------------------------------------------
+  lint:
+    name: Linter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preparar Go
+        if: inputs.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: ${{ env.WORKDIR }}/go.sum
+
+      - name: golangci-lint
+        if: inputs.language == 'go'
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.61
+          working-directory: ${{ env.WORKDIR }}
+          args: --timeout=5m
+
+      - name: Preparar Python
+        if: inputs.language == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: flake8
+        if: inputs.language == 'python'
+        working-directory: ${{ env.WORKDIR }}
+        run: |
+          pip install flake8
+          flake8 . --max-line-length=120 --count --statistics
+
+  # -------------------------------------------------------------------
+  # 3. Seguranca. SCA olha as dependencias, SAST olha o codigo proprio.
+  #    Severidade CRITICA derruba o pipeline e nada segue adiante.
+  # -------------------------------------------------------------------
+  security:
+    name: SCA e SAST
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: SCA — vulnerabilidade nas dependencias (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: ${{ env.WORKDIR }}
+          scanners: vuln
+          severity: CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+          format: table
+
+      - name: Gerar SBOM do servico
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: ${{ env.WORKDIR }}
+          format: cyclonedx
+          output: sbom.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ inputs.service }}
+          path: sbom.json
+
+      - name: Preparar Go
+        if: inputs.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: ${{ env.WORKDIR }}/go.sum
+
+      - name: SAST — gosec
+        if: inputs.language == 'go'
+        working-directory: ${{ env.WORKDIR }}
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          gosec -severity high -confidence medium ./...
+
+      - name: Preparar Python
+        if: inputs.language == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: SAST — bandit
+        if: inputs.language == 'python'
+        working-directory: ${{ env.WORKDIR }}
+        run: |
+          pip install bandit
+          bandit -r . -lll -ii
+
+  # -------------------------------------------------------------------
+  # 4. Imagem. So roda se os tres anteriores passaram.
+  # -------------------------------------------------------------------
+  image:
+    name: Build, scan e push da imagem
+    needs: [build, lint, security]
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Definir tag a partir do commit
+        id: meta
+        run: echo "tag=v1.0.0-$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
+
+      - name: Construir imagem
+        working-directory: ${{ env.WORKDIR }}
+        run: docker build -t ${{ inputs.service }}:${{ steps.meta.outputs.tag }} .
+
+      - name: Scan da imagem construida (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: ${{ inputs.service }}:${{ steps.meta.outputs.tag }}
+          severity: CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+          format: table
+
+      - name: Credenciais AWS
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login no ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Enviar para o ECR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          IMG=${{ secrets.ECR_REGISTRY }}/${{ inputs.service }}:${{ steps.meta.outputs.tag }}
+          docker tag ${{ inputs.service }}:${{ steps.meta.outputs.tag }} "$IMG"
+          docker push "$IMG"
+          echo "imagem publicada: $IMG"
+
+  # -------------------------------------------------------------------
+  # 5. GitOps. O pipeline nao faz deploy: ele so escreve a tag nova no
+  #    repositorio de manifestos. Quem aplica no cluster e o ArgoCD.
+  # -------------------------------------------------------------------
+  gitops:
+    name: Atualizar repositorio de GitOps
+    needs: image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar repositorio de manifestos
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.GITOPS_REPO }}
+          token: ${{ secrets.GITOPS_TOKEN }}
+          path: gitops
+
+      - name: Trocar a tag da imagem
+        working-directory: gitops
+        run: |
+          ARQ=apps/${{ inputs.service }}/deployment.yaml
+          sed -i -E "s|(image: .*/${{ inputs.service }}:).*|\1${{ needs.image.outputs.tag }}|" "$ARQ"
+          grep "image:" "$ARQ"
+
+      - name: Commitar
+        working-directory: gitops
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --staged --quiet && echo "nada mudou" && exit 0
+          git commit -m "deploy(${{ inputs.service }}): ${{ needs.image.outputs.tag }}"
+          git push

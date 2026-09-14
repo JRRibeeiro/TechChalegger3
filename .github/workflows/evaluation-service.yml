@@ -1,0 +1,21 @@
+name: evaluation-service
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/evaluation-service/**'
+      - '.github/workflows/evaluation-service.yml'
+      - '.github/workflows/ci-reusable.yml'
+  pull_request:
+    paths:
+      - 'services/evaluation-service/**'
+  workflow_dispatch:
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci-reusable.yml
+    with:
+      service: evaluation-service
+      language: go
+    secrets: inherit

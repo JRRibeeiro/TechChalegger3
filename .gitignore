@@ -1,0 +1,31 @@
+﻿# Terraform
+**/.terraform/*
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+
+# Variaveis locais podem conter valor sensivel
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+*_override.tf
+
+# O lock de providers DEVE ser versionado - nao ignore
+# .terraform.lock.hcl
+
+# Credenciais
+.env
+.env.*
+credentials
+*.pem
+*.key
+kubeconfig*
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
