@@ -2,3 +2,9 @@ linters-settings:
   errcheck:
     exclude-functions:
       - (*encoding/json.Encoder).Encode
+      - (*github.com/go-redis/redis/v8.baseCmd).Err
+issues:
+  exclude-rules:
+    - linters:
+        - staticcheck
+      text: "SA1019.*io/ioutil"
