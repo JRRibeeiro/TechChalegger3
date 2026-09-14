@@ -1,7 +1,7 @@
 # MULTI-STAGE — o único dos 5 que ainda era single-stage (os outros 4 já
 # estavam corretos). Mesmo padrão do evaluation-service. Imagem final cai
-# de ~300MB+ (golang:1.22-alpine com toolchain) pra ~15-20MB.
-FROM golang:1.22-alpine AS builder
+# de ~300MB+ (golang:1.24-alpine com toolchain) pra ~15-20MB.
+FROM golang:1.24-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
